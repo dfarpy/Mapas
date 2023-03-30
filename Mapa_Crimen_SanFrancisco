@@ -1,0 +1,48 @@
+
+# Importar librerías
+import matplotlib_inline
+import pandas as pd
+import folium
+import urllib.request
+import json
+
+
+
+# Descargar datos y leer en un dataframe con Pandas
+url = "https://cocl.us/sanfran_crime_dataset"
+filename = "sf_crime.csv"
+urllib.request.urlretrieve(url, filename)
+df = pd.read_csv(filename)
+
+# Reestructurar los datos
+df_neighborhoods = df.groupby('PdDistrict').count().reset_index()
+df_neighborhoods = df_neighborhoods[['PdDistrict', 'IncidntNum']]
+df_neighborhoods = df_neighborhoods.rename(columns={'PdDistrict': 'Neighborhood', 'IncidntNum': 'Count'})
+
+# Descargar GeoJSON y crear mapa Coroplético
+url_geo = "https://cocl.us/sanfran_geojson"
+filename_geo = "sf_geo.json"
+urllib.request.urlretrieve(url_geo, filename_geo)
+
+# Cargar archivo GeoJSON
+with open(filename_geo) as json_file:
+    geo_json_data = json.load(json_file)
+
+# Crear mapa centrado en San Francisco
+sf_map = folium.Map(location=[37.773972, -122.431297], zoom_start=12)
+
+# Añadir límites de vecindarios al mapa
+folium.Choropleth(
+    geo_data=geo_json_data,
+    data=df_neighborhoods,
+    columns=['Neighborhood', 'Count'],
+    key_on='feature.properties.DISTRICT',
+    fill_color='YlOrRd',
+    fill_opacity=0.7,
+    line_opacity=0.2,
+    legend_name='Number of Crimes'
+).add_to(sf_map)
+
+# Mostrar mapa
+
+sf_map.save('sf_map.html')
